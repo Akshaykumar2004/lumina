@@ -190,7 +190,7 @@ export interface AgenticAction {
 
 export class GeminiService {
   private lastRequestTime = 0;
-  private minRequestInterval = 3000; // 3 seconds between requests (increased to reduce quota usage)
+  private minRequestInterval = 4000; // 4 seconds between requests (increased to reduce quota usage)
   private requestQueue: Array<() => Promise<any>> = [];
   private isProcessingQueue = false;
   private quotaResetTime = 0;
@@ -198,9 +198,17 @@ export class GeminiService {
   private quoteCacheDuration = 3600000; // 1 hour
   private searchCache: Map<string, { text: string; timestamp: number }> = new Map();
   private searchCacheDuration = 1800000; // 30 minutes
+  private requestCount = 0;
+  private requestCountResetTime = Date.now() + 60000; // Reset every minute
 
   private async waitForRateLimit() {
     const now = Date.now();
+    
+    // Reset request count every minute
+    if (now > this.requestCountResetTime) {
+      this.requestCount = 0;
+      this.requestCountResetTime = now + 60000;
+    }
     
     // If we hit quota, wait before retrying
     if (this.quotaResetTime > now) {
@@ -210,12 +218,20 @@ export class GeminiService {
       this.quotaResetTime = 0;
     }
     
+    // If too many requests in a minute, wait longer
+    if (this.requestCount > 10) {
+      console.log(`Too many requests (${this.requestCount}). Waiting 5 seconds...`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    
     const timeSinceLastRequest = now - this.lastRequestTime;
     if (timeSinceLastRequest < this.minRequestInterval) {
       const waitTime = this.minRequestInterval - timeSinceLastRequest;
       await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
+    
     this.lastRequestTime = Date.now();
+    this.requestCount++;
   }
 
   private async queueRequest<T>(fn: () => Promise<T>): Promise<T> {
@@ -307,7 +323,7 @@ export class GeminiService {
       await this.waitForRateLimit();
 
       const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash-preview-09-2025',
+        model: 'gemini-2.5-flash-lite-preview-09-2025',
         systemInstruction: this.getSystemInstruction(persona),
         tools: tools,
       });
@@ -522,7 +538,7 @@ export class GeminiService {
 
       // Use a simple prompt to get search-like results from the model
       // In a production app, you'd integrate with a real search API
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite-preview-09-2025' });
       const prompt = `Provide information about: ${query}
       
 Give a brief, factual response with:
@@ -562,7 +578,7 @@ Keep it concise (2-3 sentences max).`;
 
       await this.waitForRateLimit();
 
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite-preview-09-2025' });
       const prompt = `Generate an inspiring, motivational quote for an Indian user. Make it relevant to personal growth, productivity, or well-being. Keep it concise (1-2 sentences).`;
 
       const result = await model.generateContent(prompt);
@@ -598,7 +614,7 @@ Keep it concise (2-3 sentences max).`;
           {} as Record<string, number>
         );
 
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite-preview-09-2025' });
       const prompt = `Analyze this financial data and provide insights:
       
 Total Income: ₹${totalIncome}
@@ -630,7 +646,7 @@ Provide 2-3 actionable financial insights for an Indian user. Be concise and pra
 
       const recentEntries = journalEntries.slice(0, 5);
 
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite-preview-09-2025' });
       const prompt = `Analyze this mood tracking data and provide wellness insights:
       
 Mood Distribution: ${JSON.stringify(moodCounts)}
@@ -658,7 +674,7 @@ Provide 2-3 supportive wellness insights for an Indian user. Be empathetic and e
         return date > now && date < weekFromNow;
       });
 
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-09-2025' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite-preview-09-2025' });
       const prompt = `Provide schedule management insights:
       
 Upcoming Events: ${upcomingCount}

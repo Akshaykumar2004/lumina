@@ -17,7 +17,7 @@ const API_KEY = getApiKey();
 export const genAI = new GoogleGenerativeAI(API_KEY);
 
 export const getGeminiModel = () => {
-  return genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
+  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 };
 
 export const PERSONAS = {
