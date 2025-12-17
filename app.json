@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Lumina Test",
+    "slug": "lumina-test",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["android", "web"]
+  }
+}
